@@ -20,7 +20,15 @@ function field(t,labels,f=""){for(const l of (Array.isArray(labels)?labels:[labe
 function listField(t,labels){const v=field(t,labels,"");if(!v||/^—|-|aucun|none|null$/i.test(v))return[];return v.split(/[,;]+/).map(x=>x.trim()).filter(Boolean).slice(0,4)}
 function section(t,names){const labels=(Array.isArray(names)?names:[names]).map(n=>n.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("|");const m=t.match(new RegExp(`(?:^|\\n)\\s*(?:#{1,6}\\s*)?(?:${labels})\\s*\\n([\\s\\S]*?)(?=\\n\\s*(?:#{1,6}\\s*)?[A-ZÀ-Ÿa-zà-ÿ0-9 ._'’/-]+\\s*\\n|$)`,"i"));return m?m[1].trim():""}
 function parseResponse(v){const m=String(v??"").match(/[+-]?\d+/);return m?Number(m[0]):0}
-function normSec(v="UNSECURED"){v=String(v||"").toUpperCase();if(/RENFORC|HARDENED/.test(v))return"HARDENED";if(/CHIFFR|ENCRYPTED/.test(v))return"ENCRYPTED";if(/SECURE|SÉCUR/.test(v))return"SECURE";if(/BROKEN|CASS|HS/.test(v))return"BROKEN";if(/UNSEC|NON/.test(v))return"UNSECURED";return v||"UNSECURED"}
+function normSec(v="UNSECURED"){
+  v=String(v||"").toUpperCase().trim();
+  // Important: UNSECURED contains the substring SECURE, so it must be tested first.
+  if(/UNSEC|NON[- ]?SEC|NO SECURITY|OPEN/.test(v))return"UNSECURED";
+  if(/RENFORC|HARDENED/.test(v))return"HARDENED";
+  if(/CHIFFR|ENCRYPTED/.test(v))return"ENCRYPTED";
+  if(/SECURE|SÉCUR/.test(v))return"SECURE";
+  return v||"UNSECURED";
+}
 function pageText(p){return textFromHtml(p.text?.content??"")}
 function parseConfig(j){const p=j.pages.find(p=>/^_?CONFIG$/i.test(p.name));if(!p)return{};const t=pageText(p);return{entryNode:field(t,["Nœud de départ","Entry node","Entry node","Entry point"],""),responseTableName:field(t,["Table de réponse","Reaction table","Response table","Table"],DEFAULT_TABLE),defaultNetwork:field(t,["Network par défaut","Default network"],"")}}
 
@@ -347,7 +355,7 @@ async function handleClientIntent(p,source="socket"){
 
 function gridPos(n){const m=String(n.grid??"").match(/(-?\d+)\s*[,;xX ]\s*(-?\d+)/);return m?{x:Number(m[1]),y:Number(m[2])}:null}
 function freeAround(o,occ,i=0){const dirs=[{x:1,y:0},{x:0,y:1},{x:0,y:-1},{x:-1,y:0}];for(let p=0;p<4;p++){const d=dirs[(i+p)%4],k=`${o.x+d.x},${o.y+d.y}`;if(!occ.has(k))return{x:o.x+d.x,y:o.y+d.y}}for(let r=2;r<12;r++)for(let dx=-r;dx<=r;dx++)for(let dy=-r;dy<=r;dy++){if(Math.abs(dx)+Math.abs(dy)!==r)continue;const k=`${o.x+dx},${o.y+dy}`;if(!occ.has(k))return{x:o.x+dx,y:o.y+dy}}return{x:o.x+1,y:o.y+1}}
-function layout(s){const nodes=s.nodes??[],entryId=s.entryNodeId??nodes[0]?.id,adj=new Map(nodes.map(n=>[n.id,new Set()]));for(const n of nodes){n.connections=(n.connections??[]).slice(0,4);for(const c of n.connections){if(!adj.has(c))continue;adj.get(n.id).add(c);adj.get(c).add(n.id)}}const grid=new Map(),occ=new Set();for(const n of nodes){const p=gridPos(n);if(p){grid.set(n.id,p);occ.add(`${p.x},${p.y}`)}}const entry=nodes.find(n=>n.id===entryId)??nodes[0];if(entry&&!grid.has(entry.id)){grid.set(entry.id,{x:0,y:0});occ.add("0,0")}const q=entry?[entry.id]:[],seen=new Set(q);while(q.length){const id=q.shift(),o=grid.get(id)??{x:0,y:0};let slot=0;for(const nx of adj.get(id)??[]){if(!grid.has(nx)){const p=freeAround(o,occ,slot);grid.set(nx,p);occ.add(`${p.x},${p.y}`)}slot++;if(!seen.has(nx)){seen.add(nx);q.push(nx)}}}let iso=0;for(const n of nodes){if(grid.has(n.id))continue;let p;do{p={x:iso%6,y:4+Math.floor(iso/6)};iso++}while(occ.has(`${p.x},${p.y}`));grid.set(n.id,p);occ.add(`${p.x},${p.y}`)}const xs=[...grid.values()].map(p=>p.x),ys=[...grid.values()].map(p=>p.y),minX=Math.min(...xs,0),minY=Math.min(...ys,0),cell=132,size=74,pad=44,pos=new Map();for(const n of nodes){const gp=grid.get(n.id);pos.set(n.id,{x:pad+(gp.x-minX)*cell,y:pad+(gp.y-minY)*cell,w:size,h:size,gx:gp.x,gy:gp.y})}const lines=[],seenL=new Set();for(const n of nodes){const a=pos.get(n.id);if(!a)continue;for(const c of n.connections??[]){const b=pos.get(c);if(!b)continue;const key=[n.id,c].sort().join("|");if(seenL.has(key))continue;seenL.add(key);const ac={x:a.x+a.w/2,y:a.y+a.h/2},bc={x:b.x+b.w/2,y:b.y+b.h/2},dx=b.gx-a.gx,dy=b.gy-a.gy;let x1=ac.x,y1=ac.y,x2=bc.x,y2=bc.y;if(Math.abs(dx)>=Math.abs(dy)){x1=ac.x+Math.sign(dx||1)*a.w/2;y1=ac.y;x2=bc.x-Math.sign(dx||1)*b.w/2;y2=bc.y}else{x1=ac.x;y1=ac.y+Math.sign(dy||1)*a.h/2;x2=bc.x;y2=bc.y-Math.sign(dy||1)*b.h/2}const mid=Math.abs(x1-x2)>Math.abs(y1-y2)?`${(x1+x2)/2},${y1} ${(x1+x2)/2},${y2}`:`${x1},${(y1+y2)/2} ${x2},${(y1+y2)/2}`;lines.push({points:`${x1},${y1} ${mid} ${x2},${y2}`,open:accessible(n)&&accessible(nodes.find(nn=>nn.id===c)),visible:n.visible!==false&&nodes.find(nn=>nn.id===c)?.visible!==false,hidden:n.visible===false||nodes.find(nn=>nn.id===c)?.visible===false})}}return{positions:pos,lines,width:Math.max(720,...[...pos.values()].map(p=>p.x+p.w+pad)),height:Math.max(560,...[...pos.values()].map(p=>p.y+p.h+pad))}}
+function layout(s){const nodes=s.nodes??[],entryId=s.entryNodeId??nodes[0]?.id,adj=new Map(nodes.map(n=>[n.id,new Set()]));for(const n of nodes){n.connections=(n.connections??[]).slice(0,4);for(const c of n.connections){if(!adj.has(c))continue;adj.get(n.id).add(c);adj.get(c).add(n.id)}}const grid=new Map(),occ=new Set();for(const n of nodes){const p=gridPos(n);if(p){grid.set(n.id,p);occ.add(`${p.x},${p.y}`)}}const entry=nodes.find(n=>n.id===entryId)??nodes[0];if(entry&&!grid.has(entry.id)){grid.set(entry.id,{x:0,y:0});occ.add("0,0")}const q=entry?[entry.id]:[],seen=new Set(q);while(q.length){const id=q.shift(),o=grid.get(id)??{x:0,y:0};let slot=0;for(const nx of adj.get(id)??[]){if(!grid.has(nx)){const p=freeAround(o,occ,slot);grid.set(nx,p);occ.add(`${p.x},${p.y}`)}slot++;if(!seen.has(nx)){seen.add(nx);q.push(nx)}}}let iso=0;for(const n of nodes){if(grid.has(n.id))continue;let p;do{p={x:iso%6,y:4+Math.floor(iso/6)};iso++}while(occ.has(`${p.x},${p.y}`));grid.set(n.id,p);occ.add(`${p.x},${p.y}`)}const xs=[...grid.values()].map(p=>p.x),ys=[...grid.values()].map(p=>p.y),minX=Math.min(...xs,0),minY=Math.min(...ys,0),cell=132,size=74,pad=44,pos=new Map();for(const n of nodes){const gp=grid.get(n.id);pos.set(n.id,{x:pad+(gp.x-minX)*cell,y:pad+(gp.y-minY)*cell,w:size,h:size,gx:gp.x,gy:gp.y})}const lines=[],seenL=new Set();for(const n of nodes){const a=pos.get(n.id);if(!a)continue;for(const c of n.connections??[]){const b=pos.get(c);if(!b)continue;const key=[n.id,c].sort().join("|");if(seenL.has(key))continue;seenL.add(key);const ac={x:a.x+a.w/2,y:a.y+a.h/2},bc={x:b.x+b.w/2,y:b.y+b.h/2},dx=b.gx-a.gx,dy=b.gy-a.gy;let x1=ac.x,y1=ac.y,x2=bc.x,y2=bc.y;if(Math.abs(dx)>=Math.abs(dy)){x1=ac.x+Math.sign(dx||1)*a.w/2;y1=ac.y;x2=bc.x-Math.sign(dx||1)*b.w/2;y2=bc.y}else{x1=ac.x;y1=ac.y+Math.sign(dy||1)*a.h/2;x2=bc.x;y2=bc.y-Math.sign(dy||1)*b.h/2}const mid=Math.abs(x1-x2)>Math.abs(y1-y2)?`${(x1+x2)/2},${y1} ${(x1+x2)/2},${y2}`:`${x1},${(y1+y2)/2} ${x2},${(y1+y2)/2}`;lines.push({points:`${x1},${y1} ${mid} ${x2},${y2}`,open:accessible(n)&&accessible(nodes.find(nn=>nn.id===c)),visible:n.visible!==false&&nodes.find(nn=>nn.id===c)?.visible!==false,hidden:n.visible===false||nodes.find(nn=>nn.id===c)?.visible===false})}}return{positions:pos,lines,width:Math.max(720,...[...pos.values()].map(p=>p.x+p.w+pad)),height:Math.max(560,...[...pos.values()].map(p=>p.y+p.h+pad)),minX,minY,cell,pad}}
 
 class HackConsoleApp extends Application{
  static get defaultOptions(){return foundry.utils.mergeObject(super.defaultOptions,{id:"mosh-hack-console",classes:["mosh-hack-console-app"],title:"Hacking Console",width:1180,height:790,resizable:true})}
@@ -600,6 +608,231 @@ class HackConsoleApp extends Application{
   }
 }
 
+
+
+const BUILDER_NODE_LIBRARY = [
+  { key:"terminal", label:"Terminal", function:"TERMINAL", security:"UNSECURED", reaction:0, description:"User-facing terminal." },
+  { key:"databank", label:"Databank", function:"DATABANK", security:"SECURE", reaction:1, description:"Local data storage." },
+  { key:"router", label:"Router", function:"ROUTER", security:"SECURE", reaction:1, description:"Routing node. Once opened, it can provide alternate paths through the system." },
+  { key:"firewall", label:"Firewall", function:"FIREWALL", security:"HARDENED", reaction:2, description:"Security barrier. Hardened by default." },
+  { key:"infrastructure", label:"Infrastructure", function:"INFRASTRUCTURE", security:"SECURE", reaction:2, description:"Controls local infrastructure." },
+  { key:"uplink", label:"Uplink", function:"UPLINK", security:"HARDENED", reaction:3, description:"External or corporate uplink." },
+  { key:"mobile", label:"Mobile terminal", function:"MOBILE TERMINAL", security:"SECURE", reaction:1, description:"Portable or personal device." },
+  { key:"encrypted", label:"Encrypted databank", function:"DATABANK", security:"ENCRYPTED", reaction:3, description:"Encrypted data storage. Requires decryption or a PEK." }
+];
+
+function makeBuilderNode(template, gx=0, gy=0, network="network.local", index=1){
+  const base = template?.label ?? "Node";
+  const name = `${String(base).toUpperCase().replace(/[^A-Z0-9]+/g,".")}.${index}`;
+  const security = normSec(template?.security ?? "UNSECURED");
+  return {
+    id: slug(`${network}.${name}`),
+    name,
+    network,
+    function: template?.function ?? "TERMINAL",
+    security,
+    response: Number(template?.reaction ?? 0),
+    baseResponse: Number(template?.reaction ?? 0),
+    state: "scanned",
+    locked: security === "ENCRYPTED",
+    grid: `${gx},${gy}`,
+    connectionsRaw: [],
+    connections: [],
+    journalUuid: "",
+    builderPageId: "",
+    builderOriginalName: name,
+    gmDescription: template?.description ?? "",
+    playerData: "",
+    success: "",
+    failure: ""
+  };
+}
+
+function builderConfigHtml(entryNode="ENTRY", reactionTable=DEFAULT_TABLE){
+  return `<p><strong>Type:</strong> HACK_SYSTEM</p>
+<p><strong>Hack Console:</strong> yes</p>
+<p><strong>Reaction table:</strong> ${esc(reactionTable)}</p>
+<p><strong>Entry node:</strong> ${esc(entryNode)}</p>`;
+}
+
+function builderEntryNodeHtml(network="network.local", node="ENTRY"){
+  return `<p><strong>Network:</strong> ${esc(network)}</p>
+<p><strong>Node:</strong> ${esc(node)}</p>
+<p><strong>Function:</strong> TERMINAL</p>
+<p><strong>Security:</strong> UNSECURED</p>
+<p><strong>Reaction:</strong> +0</p>
+<p><strong>Grid:</strong> 0,0</p>
+<p><strong>Connections:</strong></p>
+<h2>GM Description</h2>
+<p>Initial entry point.</p>
+<h2>Data</h2>
+<p></p>
+<h2>Success</h2>
+<p></p>
+<h2>Failure</h2>
+<p></p>`;
+}
+
+function builderPageHtml(n){
+  return [
+    `<p><strong>Network:</strong> ${esc(n.network)}</p>`,
+    `<p><strong>Node:</strong> ${esc(n.name)}</p>`,
+    `<p><strong>Function:</strong> ${esc(n.function)}</p>`,
+    `<p><strong>Security:</strong> ${esc(n.security)}</p>`,
+    `<p><strong>Reaction:</strong> ${Number(n.response ?? 0) >= 0 ? "+" : ""}${Number(n.response ?? 0)}</p>`,
+    `<p><strong>Grid:</strong> ${esc(n.grid || "0,0")}</p>`,
+    `<p><strong>Connections:</strong> ${esc((n.connectionsRaw ?? []).join(", "))}</p>`,
+    `<h2>GM Description</h2>`,
+    `<p>${esc(n.gmDescription || "")}</p>`,
+    `<h2>Data</h2>`,
+    `<p>${esc(n.playerData || "")}</p>`,
+    `<h2>Success</h2>`,
+    `<p>${esc(n.success || "")}</p>`,
+    `<h2>Failure</h2>`,
+    `<p>${esc(n.failure || "")}</p>`
+  ].join("\n");
+}
+
+class NetworkBuilderApp extends Application {
+  static get defaultOptions(){return foundry.utils.mergeObject(super.defaultOptions,{id:"mosh-network-builder",classes:["mosh-hack-console-app","mosh-network-builder"],title:"Hacking Network Builder",width:1180,height:790,resizable:true})}
+  constructor(options={}){super(options);this.builder={journalId:"",nodes:[],selectedNodeId:"",entryNodeId:"",mode:"select",pendingLink:null}}
+  get title(){const j=game.journal.get(this.builder.journalId);return `Hacking Network Builder${j?` — ${j.name}`:""}`}
+  loadJournal(journalId){const journal=game.journal.get(journalId);if(!journal)return;const parsed=parseJournal(journal);const entry=parsed.nodes.find(n=>n.name===parsed.config.entryNode||n.id===slug(parsed.config.entryNode))??parsed.nodes[0];this.builder={journalId,config:parsed.config,entryNodeId:entry?.id??"",nodes:parsed.nodes.map(n=>({...n,builderPageId:n.journalUuid?.split(".").pop(),builderOriginalName:n.name})),selectedNodeId:parsed.nodes[0]?.id??"",mode:this.builder.mode??"select",pendingLink:null}}
+  renderContent(){
+    const journals=game.journal.contents.filter(j=>j.pages?.size&&isHackSystemJournal(j)).sort((a,b)=>a.name.localeCompare(b.name));
+    if(!this.builder.journalId&&journals[0])this.loadJournal(journals[0].id);
+    const s={nodes:this.builder.nodes,entryNodeId:this.builder.entryNodeId,selectedNodeId:this.builder.selectedNodeId};
+    const lay=layout(s),selected=this.builder.nodes.find(n=>n.id===this.builder.selectedNodeId)??this.builder.nodes[0];
+    const lines=this.builderLines(lay);
+    const nodes=this.builder.nodes.map(n=>{const p=lay.positions.get(n.id)??{x:0,y:0,w:104,h:64};return`<button type="button" class="mhc-graph-node ${securityClass(n)} ${n.id===this.builder.selectedNodeId?"selected":""}" style="left:${p.x}px;top:${p.y}px;width:${p.w}px;height:${p.h}px" data-node-id="${esc(n.id)}" title="${esc(n.name)} — ${esc(n.security)}"><span class="mhc-node-rings"></span><span class="mhc-node-core"></span><span class="mhc-port top" data-port="top" data-node-id="${esc(n.id)}"></span><span class="mhc-port right" data-port="right" data-node-id="${esc(n.id)}"></span><span class="mhc-port bottom" data-port="bottom" data-node-id="${esc(n.id)}"></span><span class="mhc-port left" data-port="left" data-node-id="${esc(n.id)}"></span><strong>${esc(n.name)}</strong></button>`}).join("");
+    return`<div class="mhc-root mhc-builder-root"><header class="mhc-top"><div><h1>Hacking Network Builder</h1><p>Edit the source Journal. Active hacking sessions are unchanged until the GM reloads the system.</p></div><div class="mhc-config"><label>System Journal <select name="builder-journal">${journals.map(j=>`<option value="${j.id}" ${j.id===this.builder.journalId?"selected":""}>${esc(j.name)}</option>`).join("")}</select></label><button type="button" data-builder-action="new-system">New system</button><button type="button" data-builder-action="load">Load</button><button type="button" data-builder-action="save">Save to Journal</button><hr><div class="mhc-builder-modes"><button type="button" data-builder-mode="select" class="${this.builder.mode==="select"?"active":""}">Select / Move</button><button type="button" data-builder-mode="link" class="${this.builder.mode==="link"?"active":""}">Create link</button><button type="button" data-builder-mode="delete-link" class="${this.builder.mode==="delete-link"?"active":""}">Delete link</button></div>${this.builder.pendingLink?`<p class="mhc-link-pending">Link from ${esc(this.nodeName(this.builder.pendingLink.nodeId))} / ${esc(this.builder.pendingLink.port)} — click another port.</p>`:""}</div></header><main class="mhc-main"><section class="mhc-map"><div class="mhc-stage mhc-builder-stage" style="width:${lay.width}px;height:${lay.height}px" data-min-x="${lay.minX??0}" data-min-y="${lay.minY??0}" data-cell="${lay.cell??132}" data-pad="${lay.pad??44}"><svg class="mhc-svg" width="${lay.width}" height="${lay.height}" viewBox="0 0 ${lay.width} ${lay.height}" preserveAspectRatio="none">${lines}</svg>${nodes}</div></section><aside class="mhc-info">${this.nodeLibrary()}${selected?this.editor(selected):`<h2>No node</h2><p>Load a HACK_SYSTEM Journal first, or drag a node type onto the grid.</p>`}</aside></main></div>`
+  }
+
+  nodeName(id){return this.builder.nodes.find(n=>n.id===id)?.name??id}
+  portPoint(pos,port){const cx=pos.x+pos.w/2,cy=pos.y+pos.h/2;if(port==="top")return{x:cx,y:pos.y};if(port==="right")return{x:pos.x+pos.w,y:cy};if(port==="bottom")return{x:cx,y:pos.y+pos.h};if(port==="left")return{x:pos.x,y:cy};return{x:cx,y:cy}}
+  autoPort(a,b){const dx=b.gx-a.gx,dy=b.gy-a.gy;if(Math.abs(dx)>=Math.abs(dy))return dx>=0?["right","left"]:["left","right"];return dy>=0?["bottom","top"]:["top","bottom"]}
+  builderLines(lay){
+    const out=[],seen=new Set();
+    for(const n of this.builder.nodes){
+      const a=lay.positions.get(n.id);if(!a)continue;
+      for(const c of n.connections??[]){
+        const target=this.builder.nodes.find(x=>x.id===c),b=lay.positions.get(c);
+        if(!target||!b)continue;
+        const key=[n.id,c].sort().join("|");if(seen.has(key))continue;seen.add(key);
+        const [ap,bp]=this.autoPort(a,b),p1=this.portPoint(a,ap),p2=this.portPoint(b,bp);
+        const mid=Math.abs(p1.x-p2.x)>Math.abs(p1.y-p2.y)?`${(p1.x+p2.x)/2},${p1.y} ${(p1.x+p2.x)/2},${p2.y}`:`${p1.x},${(p1.y+p2.y)/2} ${p2.x},${(p1.y+p2.y)/2}`;
+        out.push(`<polyline class="mhc-link mhc-builder-link ${this.builder.mode==="delete-link"?"deletable":""}" data-from="${esc(n.id)}" data-to="${esc(c)}" points="${p1.x},${p1.y} ${mid} ${p2.x},${p2.y}"></polyline>`);
+      }
+    }
+    return out.join("");
+  }
+  setBuilderMode(mode){
+    this.builder.mode=mode;
+    this.builder.pendingLink=null;
+    this.render(false);
+  }
+  connectNodes(fromId,toId){
+    if(!fromId||!toId||fromId===toId)return false;
+    const a=this.builder.nodes.find(n=>n.id===fromId),b=this.builder.nodes.find(n=>n.id===toId);
+    if(!a||!b)return false;
+    a.connectionsRaw??=[];b.connectionsRaw??=[];
+    if(!a.connectionsRaw.includes(b.name))a.connectionsRaw.push(b.name);
+    if(!b.connectionsRaw.includes(a.name))b.connectionsRaw.push(a.name);
+    this.rebuildConnections();
+    return true;
+  }
+  deleteLink(fromId,toId){
+    const a=this.builder.nodes.find(n=>n.id===fromId),b=this.builder.nodes.find(n=>n.id===toId);
+    if(!a||!b)return false;
+    a.connectionsRaw=(a.connectionsRaw??[]).filter(x=>slug(x)!==slug(b.name)&&slug(`${a.network}.${x}`)!==b.id);
+    b.connectionsRaw=(b.connectionsRaw??[]).filter(x=>slug(x)!==slug(a.name)&&slug(`${b.network}.${x}`)!==a.id);
+    this.rebuildConnections();
+    return true;
+  }
+  rebuildConnections(){
+    const byName=new Map(this.builder.nodes.map(n=>[slug(n.name),n.id]));
+    const byNet=new Map(this.builder.nodes.map(n=>[slug(`${n.network}.${n.name}`),n.id]));
+    for(const n of this.builder.nodes)n.connections=(n.connectionsRaw??[]).map(x=>byNet.get(slug(`${n.network}.${x}`))??byName.get(slug(x))??slug(`${n.network}.${x}`)).slice(0,4);
+  }
+  nodeLibrary(){return`<section class="mhc-node-library"><h3>Node library</h3><p>Drag a node type onto the grid.</p><div class="mhc-node-library-list">${BUILDER_NODE_LIBRARY.map(t=>`<button type="button" class="mhc-library-node sec-${String(t.security).toLowerCase()}" draggable="true" data-template-key="${esc(t.key)}"><span>${esc(t.label)}</span><small>${esc(t.security)} · ${esc(t.function)}</small></button>`).join("")}</div></section><hr>`}
+  editor(n){return`<h2>${esc(n.name)}</h2><div class="mhc-builder-form" data-node-id="${esc(n.id)}"><label>Node <input name="name" value="${esc(n.name)}"></label><label>Network <input name="network" value="${esc(n.network)}"></label><label>Function <input name="function" value="${esc(n.function)}"></label><label>Security <select name="security">${["UNSECURED","SECURE","HARDENED","ENCRYPTED"].map(v=>`<option value="${v}" ${n.security===v?"selected":""}>${v}</option>`).join("")}</select></label><label>Reaction <input name="response" type="number" value="${Number(n.response??0)}"></label><label>Grid <input name="grid" value="${esc(n.grid||"0,0")}"></label><label>Connections <input name="connectionsRaw" value="${esc((n.connectionsRaw??[]).join(", "))}"></label><label>GM Description <textarea name="gmDescription">${esc(n.gmDescription||"")}</textarea></label><label>Data <textarea name="playerData">${esc(n.playerData||"")}</textarea></label><label>Success <textarea name="success">${esc(n.success||"")}</textarea></label><label>Failure <textarea name="failure">${esc(n.failure||"")}</textarea></label></div>`}
+  async _renderInner(){return $(this.renderContent())}
+  activateListeners(html){super.activateListeners(html);html.find("[data-builder-mode]").on("click",ev=>{this.setBuilderMode(ev.currentTarget.dataset.builderMode)});html.find("[data-builder-action='new-system']").on("click",async()=>{await this.createNewSystem()});html.find("[data-builder-action='load']").on("click",()=>{this.loadJournal(html.find("[name='builder-journal']").val());this.render(false)});html.find("[data-builder-action='save']").on("click",async()=>{this.captureEditor(html);await this.saveToJournal()});html.find(".mhc-port").on("click",ev=>{ev.preventDefault();ev.stopPropagation();if(this.builder.mode!=="link")return;const port={nodeId:ev.currentTarget.dataset.nodeId,port:ev.currentTarget.dataset.port};if(!this.builder.pendingLink){this.builder.pendingLink=port;this.builder.selectedNodeId=port.nodeId;return this.render(false)}this.connectNodes(this.builder.pendingLink.nodeId,port.nodeId);this.builder.pendingLink=null;this.builder.selectedNodeId=port.nodeId;this.render(false)});html.find(".mhc-builder-link").on("click",ev=>{if(this.builder.mode!=="delete-link")return;ev.preventDefault();this.deleteLink(ev.currentTarget.dataset.from,ev.currentTarget.dataset.to);this.render(false)});html.find(".mhc-graph-node").on("click",ev=>{if(this.builder.mode==="delete-link")return;this.captureEditor(html);this.builder.selectedNodeId=ev.currentTarget.dataset.nodeId;this.render(false)});html.find(".mhc-builder-form input,.mhc-builder-form select,.mhc-builder-form textarea").on("change",()=>{this.captureEditor(html);this.render(false)});this.bindLibrary(html);this.bindDrag(html)}
+  captureEditor(html){const form=html.find(".mhc-builder-form").first();if(!form.length)return;const node=this.builder.nodes.find(n=>n.id===form.data("node-id"));if(!node)return;node.name=form.find("[name='name']").val()?.trim()||node.name;node.network=form.find("[name='network']").val()?.trim()||node.network;node.function=form.find("[name='function']").val()?.trim()||node.function;node.security=normSec(form.find("[name='security']").val());node.response=parseResponse(form.find("[name='response']").val());node.baseResponse=node.response;node.grid=form.find("[name='grid']").val()?.trim()||"0,0";node.connectionsRaw=String(form.find("[name='connectionsRaw']").val()??"").split(/[,;]+/).map(x=>x.trim()).filter(Boolean).slice(0,4);node.gmDescription=form.find("[name='gmDescription']").val()??"";node.playerData=form.find("[name='playerData']").val()??"";node.success=form.find("[name='success']").val()??"";node.failure=form.find("[name='failure']").val()??"";node.id=slug(`${node.network}.${node.name}`);if(node.security==="ENCRYPTED")node.locked=true;this.rebuildConnections();this.builder.selectedNodeId=node.id}
+  addNodeFromTemplate(templateKey,gx=0,gy=0){
+    const template=BUILDER_NODE_LIBRARY.find(t=>t.key===templateKey)??BUILDER_NODE_LIBRARY[0];
+    const selected=this.builder.nodes.find(n=>n.id===this.builder.selectedNodeId)??this.builder.nodes[0];
+    const network=selected?.network??"network.local";
+    let index=this.builder.nodes.length+1;
+    let node=makeBuilderNode(template,gx,gy,network,index);
+    while(this.builder.nodes.some(n=>n.id===node.id)){
+      index++;
+      node=makeBuilderNode(template,gx,gy,network,index);
+    }
+    this.builder.nodes.push(node);
+    this.builder.selectedNodeId=node.id;
+    return node;
+  }
+  bindLibrary(html){
+    html.find(".mhc-library-node").on("dragstart",ev=>{
+      ev.originalEvent.dataTransfer.setData("text/plain",ev.currentTarget.dataset.templateKey);
+      ev.originalEvent.dataTransfer.effectAllowed="copy";
+    });
+    const stage=html.find(".mhc-builder-stage").first();
+    if(!stage.length)return;
+    stage.on("dragover",ev=>{ev.preventDefault();ev.originalEvent.dataTransfer.dropEffect="copy"});
+    stage.on("drop",ev=>{
+      ev.preventDefault();
+      this.captureEditor(html);
+      const key=ev.originalEvent.dataTransfer.getData("text/plain");
+      if(!key)return;
+      const sr=stage[0].getBoundingClientRect(),cell=Number(stage.data("cell")??132),pad=Number(stage.data("pad")??44),minX=Number(stage.data("min-x")??0),minY=Number(stage.data("min-y")??0);
+      const gx=Math.round((ev.originalEvent.clientX-sr.left-pad)/cell+minX);
+      const gy=Math.round((ev.originalEvent.clientY-sr.top-pad)/cell+minY);
+      this.addNodeFromTemplate(key,gx,gy);
+      this.render(false);
+    });
+  }
+  bindDrag(html){const stage=html.find(".mhc-builder-stage").first();if(!stage.length)return;let drag=null;html.find(".mhc-graph-node").on("pointerdown",ev=>{if(this.builder.mode!=="select")return;ev.preventDefault();this.captureEditor(html);const el=ev.currentTarget,rect=el.getBoundingClientRect();drag={id:el.dataset.nodeId,el,dx:ev.clientX-rect.left,dy:ev.clientY-rect.top};el.setPointerCapture?.(ev.pointerId)});html.on("pointermove",ev=>{if(!drag)return;const sr=stage[0].getBoundingClientRect();drag.el.style.left=`${Math.max(0,ev.clientX-sr.left-drag.dx)}px`;drag.el.style.top=`${Math.max(0,ev.clientY-sr.top-drag.dy)}px`});html.on("pointerup",ev=>{if(!drag)return;const sr=stage[0].getBoundingClientRect(),cell=Number(stage.data("cell")??132),pad=Number(stage.data("pad")??44),minX=Number(stage.data("min-x")??0),minY=Number(stage.data("min-y")??0);const gx=Math.round((ev.clientX-sr.left-drag.dx-pad)/cell+minX),gy=Math.round((ev.clientY-sr.top-drag.dy-pad)/cell+minY);const node=this.builder.nodes.find(n=>n.id===drag.id);if(node){node.grid=`${gx},${gy}`;this.builder.selectedNodeId=node.id}drag=null;this.render(false)})}
+
+  async createNewSystem(){
+    if(!game.user.isGM)return ui.notifications.warn("Only the GM can create hack systems.");
+    const content=`<form class="hh-dialog">
+      <div class="form-group"><label>System name</label><input name="systemName" value="Hacking Console — New System"></div>
+      <div class="form-group"><label>Network</label><input name="network" value="network.local"></div>
+      <div class="form-group"><label>Entry node</label><input name="entryNode" value="ENTRY"></div>
+    </form>`;
+    const data=await new Promise(resolve=>{
+      new Dialog({
+        title:"Create new hack system",
+        content,
+        buttons:{
+          create:{label:"Create",icon:'<i class="fas fa-plus"></i>',callback:html=>resolve({
+            systemName:html.find("[name='systemName']").val()?.trim()||"Hacking Console — New System",
+            network:html.find("[name='network']").val()?.trim()||"network.local",
+            entryNode:html.find("[name='entryNode']").val()?.trim()||"ENTRY"
+          })},
+          cancel:{label:"Cancel",callback:()=>resolve(null)}
+        },
+        default:"create",
+        close:()=>resolve(null)
+      }).render(true);
+    });
+    if(!data)return;
+    const pages=[
+      {name:"_CONFIG",type:"text",sort:100,title:{show:true,level:1},text:{format:1,content:builderConfigHtml(data.entryNode)}},
+      {name:`${data.network} / ${data.entryNode}`,type:"text",sort:200,title:{show:true,level:1},text:{format:1,content:builderEntryNodeHtml(data.network,data.entryNode)}}
+    ];
+    const journal=await JournalEntry.create({name:data.systemName,flags:{[MODULE_ID]:{hackSystem:true}},pages},{renderSheet:false});
+    this.loadJournal(journal.id);
+    ui.notifications.info(`Created hack system ${journal.name}.`);
+    this.render(false);
+  }
+
+  async saveToJournal(){const journal=game.journal.get(this.builder.journalId);if(!journal)return ui.notifications.warn("No Journal selected.");if(!game.user.isGM)return ui.notifications.warn("Only the GM can save hack systems.");const updates=[],creates=[];let sort=300+journal.pages.size*100;for(const n of this.builder.nodes){const page=journal.pages.get(n.builderPageId);const data={name:`${n.network} / ${n.name}`,type:"text",sort:sort+=100,title:{show:true,level:1},text:{format:1,content:builderPageHtml(n)}};if(page)updates.push({_id:page.id,name:data.name,text:data.text});else creates.push(data)}if(updates.length)await journal.updateEmbeddedDocuments("JournalEntryPage",updates);if(creates.length){const made=await journal.createEmbeddedDocuments("JournalEntryPage",creates);for(const p of made){const node=this.builder.nodes.find(n=>`${n.network} / ${n.name}`===p.name);if(node){node.builderPageId=p.id;node.journalUuid=p.uuid}}}ui.notifications.info(`Saved ${updates.length} page(s), created ${creates.length} page(s) in ${journal.name}.`)}
+}
+export function launchBuilder(){new NetworkBuilderApp().render(true)}
+
 async function rollHacking(actor,node,mode=""){const skill=actor.items.find(i=>i.type==="skill"&&/hacking|piratage/i.test(i.name)),skillName=skill?.name??"Hacking",bonus=Number(skill?.system?.bonus??0),stat=actor.system?.stats?.intellect??{},target=Number(stat.value??0)+Number(stat.mod??0)+bonus,formula=typeof actor.parseRollString==="function"?actor.parseRollString(`1d100 ${mode}`.trim(),"low"):(mode==="[+]"?"{1d100,1d100}kl":mode==="[-]"?"{1d100,1d100}kh":"1d100"),roll=await new Roll(formula).evaluate(),total=roll.total,success=total<target&&total<90,crit=total%11===0;await roll.toMessage({speaker:ChatMessage.getSpeaker({actor}),flavor:`<h2>Hacking roll</h2><p><strong>Node:</strong> ${esc(node.name)} — ${esc(node.security)}</p><p><strong>Check:</strong> Intellect + ${esc(skillName)} = ${target}</p><p><strong>Result:</strong> ${success?"Success":"Failure"}${crit?" critical":""}</p>`});return{success,total,target,crit}}
 function rerenderOpen(){for(const app of Object.values(ui.windows))if(app instanceof HackConsoleApp)app.render(false)}
 export function launchConsole(){remember(canonical());new HackConsoleApp().render(true)}
@@ -618,4 +851,4 @@ async function createDefaults(){if(!game.user.isGM)return;if(!game.journal.getNa
     ]},{renderSheet:false})
   }if(!game.tables.getName(DEFAULT_TABLE)){await RollTable.create({name:DEFAULT_TABLE,formula:"1d10",replacement:true,displayRoll:true,results:["Warning message. Reaction +1.","Device remotely powered off.","User account locked for 1d10 hours.","Security member dispatched.","Decoy directories and security investigation.","Network locked down for 1d10 hours.","Network security increased by 1.","Linked networks Reaction +1.","Facility blackout. Non-essential systems powered down.","Tactical team deployed in 1d5 rounds."].map((t,i)=>({type:"text",weight:1,range:[i+1,i+1],name:t,img:"icons/svg/d20-black.svg",description:`<p>${t}</p>`,drawn:false,flags:{}}))})}}
 Hooks.once("ready",createDefaults);
-globalThis.MoshHackingConsole={launchConsole};
+globalThis.MoshHackingConsole={launchConsole,launchBuilder};

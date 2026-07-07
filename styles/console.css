@@ -71,3 +71,96 @@
   inset:8px;
   border:2px solid currentColor;
 }
+
+/* V0.7.0 — Hacking Network Builder */
+.mhc-builder-form{display:flex;flex-direction:column;gap:8px}
+.mhc-builder-form label{display:flex;flex-direction:column;gap:3px;font-weight:bold}
+.mhc-builder-form input,.mhc-builder-form select,.mhc-builder-form textarea{width:100%;background:rgba(0,0,0,.35);color:#dfffe2;border:1px solid rgba(140,255,170,.35);border-radius:4px;padding:5px 7px}
+.mhc-builder-form textarea{min-height:72px;resize:vertical}
+.mhc-builder-stage .mhc-graph-node{cursor:grab}
+.mhc-builder-stage .mhc-graph-node:active{cursor:grabbing}
+
+
+/* V0.7.1 — visible builder grid */
+.mhc-builder-stage{
+  /*
+    Console layout positions nodes by their top-left corner at:
+    pad + gridIndex * cell.
+    Since nodes are 74px wide, their center sits at pad + 37px.
+    The visible grid is therefore shifted to 81px (= 44 + 37) so
+    grid intersections visually match node centers.
+  */
+  background-image:
+    linear-gradient(rgba(180,255,190,.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(180,255,190,.12) 1px, transparent 1px),
+    radial-gradient(circle at 81px 81px, rgba(180,255,190,.28) 0 2px, transparent 2px);
+  background-size:132px 132px,132px 132px,132px 132px;
+  background-position:81px 81px,81px 81px,0 0;
+}
+.mhc-builder-root .mhc-config button[data-builder-action="new-system"]{
+  font-weight:bold;
+}
+
+.mhc-builder-stage .mhc-graph-node::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:5px;
+  height:5px;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  background:rgba(210,255,215,.85);
+  box-shadow:0 0 7px rgba(160,255,180,.8);
+  pointer-events:none;
+}
+
+/* V0.7.5 — draggable node library */
+.mhc-node-library{margin-bottom:8px}
+.mhc-node-library h3{margin:.1rem 0 .25rem}
+.mhc-node-library p{margin:.15rem 0 .45rem;opacity:.8}
+.mhc-node-library-list{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.mhc-library-node{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:2px;
+  padding:6px 7px;
+  border-radius:5px;
+  border:1px solid rgba(190,255,200,.35);
+  background:rgba(0,0,0,.35);
+  color:#e6ffe9;
+  cursor:grab;
+  text-align:left;
+}
+.mhc-library-node:hover{background:rgba(170,255,185,.12)}
+.mhc-library-node:active{cursor:grabbing}
+.mhc-library-node small{opacity:.7;font-size:.72rem}
+
+/* V0.7.6 — link editor */
+.mhc-builder-modes{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
+.mhc-builder-modes button.active{outline:2px solid rgba(210,255,220,.9);background:rgba(150,255,170,.18)}
+.mhc-link-pending{margin:.35rem 0 0;font-size:.82rem;color:#d7ffd9}
+.mhc-builder-stage .mhc-port{
+  position:absolute;
+  width:10px;
+  height:10px;
+  border:1px solid rgba(210,255,220,.9);
+  border-radius:50%;
+  background:#071207;
+  box-shadow:0 0 6px rgba(150,255,170,.7);
+  opacity:.3;
+  pointer-events:auto;
+  z-index:5;
+}
+.mhc-network-builder .mhc-port,
+.mhc-builder-root .mhc-port{opacity:.55}
+.mhc-builder-root .mhc-graph-node:hover .mhc-port,
+.mhc-builder-root .mhc-port:hover{opacity:1}
+.mhc-port.top{left:50%;top:-7px;transform:translateX(-50%)}
+.mhc-port.right{right:-7px;top:50%;transform:translateY(-50%)}
+.mhc-port.bottom{left:50%;bottom:-7px;transform:translateX(-50%)}
+.mhc-port.left{left:-7px;top:50%;transform:translateY(-50%)}
+.mhc-builder-link{pointer-events:stroke;stroke-width:4}
+.mhc-builder-link.deletable{cursor:not-allowed;stroke:#ff5757;stroke-width:6}
+.mhc-builder-root .mhc-svg{pointer-events:auto}
