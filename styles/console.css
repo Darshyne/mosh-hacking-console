@@ -1,0 +1,73 @@
+.mosh-hack-console-app .window-content{padding:0;background:#101610}.mhc-root{color:#dff5dc;background:#101610;min-height:700px;padding:10px;box-sizing:border-box}.mhc-top{display:flex;justify-content:space-between;gap:16px;padding:10px;margin-bottom:10px;border:1px solid rgba(199,224,198,.45);background:rgba(199,224,198,.1)}.mhc-top h1{margin:0 0 6px;font-size:20px}.mhc-top p{margin:2px 0}.mhc-config{display:grid;grid-template-columns:1fr 1fr;gap:5px;min-width:420px;font-size:12px}.mhc-config label{display:grid;gap:2px}.mhc-config select{width:100%}.mhc-user-list{grid-column:span 2;display:flex;flex-wrap:wrap;gap:8px;max-height:60px;overflow:auto}.mhc-config button{min-height:24px}.mhc-main{display:grid;grid-template-columns:minmax(640px,1fr) 360px;gap:10px;height:calc(100% - 112px)}.mhc-map{position:relative;min-height:570px;overflow:auto;background:linear-gradient(rgba(0,40,0,.10) 1px,transparent 1px),linear-gradient(90deg,rgba(0,40,0,.10) 1px,transparent 1px),radial-gradient(circle at center,rgba(28,80,24,.24),transparent 62%),#070b07;background-size:132px 132px,132px 132px,100% 100%,100% 100%;color:#081108;border:1px solid rgba(199,224,198,.55);box-shadow:inset 0 0 28px rgba(0,0,0,.18)}.mhc-stage{position:relative;min-width:100%;min-height:100%;background-image:repeating-linear-gradient(0deg,rgba(80,255,80,.03),rgba(80,255,80,.03) 1px,transparent 1px,transparent 5px)}.mhc-svg{position:absolute;inset:0;pointer-events:none;overflow:visible;width:auto!important;height:auto!important}.mhc-link{fill:none;stroke:#497b43;stroke-width:4;stroke-linejoin:round;stroke-linecap:square;vector-effect:non-scaling-stroke}.mhc-link.open{stroke:#6eda65;stroke-width:5}.mhc-graph-node{position:absolute;display:flex;align-items:center;justify-content:center;padding:0;border-radius:0;border:2px solid #5aa957;background:#020502;box-shadow:0 0 0 2px rgba(0,0,0,.55),inset 0 0 18px rgba(0,0,0,.8);text-align:center;cursor:pointer}.mhc-graph-node strong{position:absolute;left:50%;bottom:-22px;transform:translateX(-50%);display:block;width:132px;color:#c7e0c6;font-family:"Courier New",monospace;font-size:10px;line-height:1;text-align:center;text-shadow:0 0 4px #000;pointer-events:none}.mhc-node-core{display:block;width:22px;height:22px;border-radius:2px;background:#777;box-shadow:0 0 8px rgba(255,255,255,.35)}.mhc-graph-node.scanned .mhc-node-core{background:#7b8380}.mhc-graph-node.open{border-color:#79e06f}.mhc-graph-node.open .mhc-node-core{background:#1ee75b;box-shadow:0 0 12px rgba(30,231,91,.8)}.mhc-graph-node.compromised{border-color:#ff4d4d}.mhc-graph-node.compromised .mhc-node-core{background:#e11f1f;box-shadow:0 0 12px rgba(225,31,31,.8)}.mhc-graph-node.entry{border-color:#4fa7ff}.mhc-graph-node.entry .mhc-node-core{background:#136dff;box-shadow:0 0 12px rgba(19,109,255,.85)}.mhc-graph-node.accessible{outline:2px solid rgba(255,255,255,.75);outline-offset:4px}.mhc-graph-node.selected{outline:3px solid #fff;outline-offset:5px}.mhc-graph-node.locked:after{content:"LOCK";position:absolute;top:-18px;left:50%;transform:translateX(-50%);color:#ff8888;font-size:10px;font-family:"Courier New",monospace}.mhc-info{padding:10px;overflow:auto;max-height:620px;border:1px solid rgba(199,224,198,.45);background:rgba(199,224,198,.11)}.mhc-info h2{margin-top:0;color:#f1fff0}.mhc-box{padding:8px;border-left:3px solid #c7e0c6;background:rgba(0,0,0,.25)}.mhc-warning{color:#ffcaca}.mhc-actions{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}.mhc-actions button{flex:1 1 45%;min-height:28px}.mhc-actions .mini,button.mini{flex:0 0 auto;min-height:20px;padding:1px 6px;margin-left:3px}.mhc-context-menu{position:fixed;z-index:99999;min-width:210px;padding:7px;color:#d8f2d6;background:rgba(12,22,12,.98);border:1px solid rgba(199,224,198,.65);box-shadow:0 8px 22px rgba(0,0,0,.45)}.mhc-context-menu strong{display:block;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid rgba(199,224,198,.35)}.mhc-context-menu button{display:block;width:100%;margin:3px 0;text-align:left}
+.mhc-config-note{grid-column:span 2;font-size:11px;opacity:.8;margin:2px 0}.mhc-config{grid-template-columns:1fr 1fr 1fr}.mhc-user-list{grid-column:span 3}.mhc-config-note{grid-column:span 3}
+
+.mhc-graph-node.hidden-node{opacity:.28}
+.mhc-link.hidden{opacity:.18;stroke-dasharray:6 8}
+
+.mhc-conditions{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.mhc-conditions span{display:inline-block;border:1px solid rgba(255,180,90,.75);background:rgba(120,55,0,.35);color:#ffd9a5;border-radius:4px;padding:2px 6px;font-size:11px}
+.mhc-alert-overlay{position:fixed;inset:0;z-index:999999;display:flex;align-items:center;justify-content:center;background:rgba(8,0,0,.88);color:#ffdddd;text-align:center;font-family:"Courier New",monospace}
+.mhc-alert-overlay>div{border:2px solid #ff5555;background:#170303;padding:32px;box-shadow:0 0 32px rgba(255,0,0,.55)}
+.mhc-alert-overlay h1{font-size:36px;letter-spacing:.08em;margin:0 0 12px;color:#ff6b6b}
+
+.mhc-alert-overlay.warning{background:rgba(20,14,0,.84);color:#fff0c0}
+.mhc-alert-overlay.warning>div{border-color:#ffb347;background:#1d1202;box-shadow:0 0 32px rgba(255,160,0,.45)}
+.mhc-alert-overlay.warning h1{color:#ffd06a}
+
+
+/* V0.5.3 — symbologie des nœuds selon le niveau de sécurité */
+.mhc-graph-node{
+  color:#7b8380;
+  border:none !important;
+}
+.mhc-graph-node.open{color:#79e06f}
+.mhc-graph-node.compromised{color:#ff4d4d}
+.mhc-graph-node.entry{color:#4fa7ff}
+
+.mhc-node-rings,
+.mhc-node-rings::before,
+.mhc-node-rings::after{
+  position:absolute;
+  content:"";
+  display:block;
+  pointer-events:none;
+  box-sizing:border-box;
+}
+
+.mhc-node-rings{
+  inset:0;
+  border-radius:2px;
+}
+
+.mhc-node-rings::before,
+.mhc-node-rings::after{
+  border-radius:1px;
+}
+
+.mhc-graph-node.sec-unsecured .mhc-node-rings{
+  border:2px dashed currentColor;
+}
+
+.mhc-graph-node.sec-secure .mhc-node-rings{
+  border:2px solid currentColor;
+}
+
+.mhc-graph-node.sec-hardened .mhc-node-rings{
+  border:2px solid currentColor;
+}
+.mhc-graph-node.sec-hardened .mhc-node-rings::before{
+  inset:4px;
+  border:2px solid currentColor;
+}
+
+.mhc-graph-node.sec-encrypted .mhc-node-rings{
+  border:2px solid currentColor;
+}
+.mhc-graph-node.sec-encrypted .mhc-node-rings::before{
+  inset:4px;
+  border:2px solid currentColor;
+}
+.mhc-graph-node.sec-encrypted .mhc-node-rings::after{
+  inset:8px;
+  border:2px solid currentColor;
+}

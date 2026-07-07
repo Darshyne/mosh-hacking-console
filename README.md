@@ -1,7 +1,12 @@
 # MoSh — Hacking Console
 
-Transforme les règles de piratage du Hacker's Handbook en une console
-interactive MJ/joueurs, avec réseaux stockés en JournalEntry et éditeur
-graphique (Network Builder). Dépend de `mosh-hackers-handbook >= 0.9.5`.
-Voir CLAUDE.md pour l'architecture complète (modèle authoritative, sécurité
-des nœuds, réactions, roadmap).
+Interactive hacking console for the MoSh system and the *Hacker's Handbook* rules.
+
+## V0.6.0
+
+- Renamed module id from `mosh-hacking-console-fr` to `mosh-hacking-console`.
+- English becomes the source language.
+- Updated dependency to `mosh-hackers-handbook` `0.9.5+`.
+- Software detection now reads the new handbook flag namespace first and falls back to the former `mosh-hackers-handbook-fr` namespace for compatibility.
+- GM console remains authoritative: players send intents, the GM console applies state changes and broadcasts the canonical state.
+- Default demo journals and the standard Intrusion Reaction table are now generated in English.
