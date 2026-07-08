@@ -2,6 +2,14 @@
 
 Interactive hacking console for the MoSh system and the *Hacker's Handbook* rules.
 
+## Legal
+
+This module is an **unofficial** fan project, not affiliated with Tuesday
+Knight Games. Mothership© is the property of Tuesday Knight Games —
+[tuesdayknightgames.com](https://www.tuesdayknightgames.com/). All related
+rights and trademarks belong to their respective owners. This module is
+distributed free of charge for non-commercial purposes.
+
 ## V0.6.0
 
 - Renamed module id from `mosh-hacking-console-fr` to `mosh-hacking-console`.
